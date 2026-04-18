@@ -98,6 +98,145 @@ const DICT = {
     hybridNote: "Score is based on community reviews and on-chain activity."
   },
   uk: {
+    brand: "SafeChain",
+    tagline: "Web3 Reputation Layer",
+    subtitle: "Миттєва перевірка довіри для будь-якої адреси в блокчейні.",
+    checkRep: "Перевірка репутації",
+    placeholder: "Введіть адресу гаманця Solana",
+    btnCheck: "Перевірити репутацію",
+    btnChecking: "Перевірка...",
+    resultTitle: "Результат аналізу",
+    trustScore: "Рейтинг довіри",
+    wallet: "Гаманець",
+    reviews: "Відгуки",
+    notRatedPrompt: "У цього гаманця ще немає відгуків ком'юніті. Показано базову активність.",
+    recentReviews: "Останні відгуки",
+    noReviews: "Відгуків ще немає.",
+    leaveReview: "Залишити відгук",
+    toneSafe: "Безпечно",
+    toneNeutral: "Нейтрально",
+    toneScam: "Шахрай (Scam)",
+    commentPlaceholder: "Поділіться досвідом взаємодії з цим гаманцем",
+    btnSubmit: "Надіслати відгук",
+    btnSubmitting: "Надсилання...",
+    errConnect: "Підключіть гаманець, щоб залишити відгук.",
+    errTarget: "Введіть цільову адресу.",
+    errComment: "Напишіть коментар перед відправкою.",
+    msgConfirmWallet: "Підтвердіть у гаманці.",
+    msgTxRejected: "Транзакцію відхилено.",
+    msgWalletSignRefused: "Phantom відмовився підписати транзакцію. Спробуйте ще раз.",
+    msgNoSol: "Немає SOL для оплати комісії. Поповніть спонсорський гаманець і спробуйте знову.",
+    msgCooldown: "Зачекайте трохи перед наступним відгуком.",
+    msgAlreadyReviewed: "Ви вже залишали відгук для цього гаманця.",
+    msgSubmitFailed: "Не вдалося надіслати відгук. Оновіть сторінку та спробуйте ще раз.",
+    msgConnectWallet: "Підключіть гаманець.",
+    msgLoadedProfile: "Репутацію та дані мережі завантажено.",
+    msgLoadedBaseline: "Адреса валідна. Обчислено базовий chain score.",
+    msgInvalidAddress: "Невірна адреса гаманця Solana.",
+    msgReviewCreated: "Відгук успішно створено. Tx:",
+    btnOpenProfile: "Відкрити повний профіль",
+    btnHideProfile: "Сховати повний профіль",
+    profileTitle: "Профіль гаманця",
+    avgRating: "Середній рейтинг",
+    scamShare: "Частка scam",
+    recent7d: "Відгуки (7 днів)",
+    recent30d: "Відгуки (30 днів)",
+    filterAll: "Всі",
+    filterSafe: "Безпечно",
+    filterNeutral: "Нейтрально",
+    filterScam: "Scam",
+    flaggedStatus: "Статус ризику",
+    flaggedYes: "Підозрілий",
+    flaggedNo: "Нормальний",
+    profilePageTitle: "Детальний профіль гаманця",
+    closeProfile: "Назад",
+    txHistory: "Історія транзакцій",
+    balanceChart: "Історія балансу",
+    trustGauge: "Індекс довіри",
+    status: "Статус",
+    delta: "Δ SOL",
+    statusInit: "Введіть адресу гаманця для аналізу.",
+    riskNotRated: "Без оцінки",
+    riskSafe: "Низький ризик",
+    riskMedium: "Середній ризик",
+    riskHigh: "Високий ризик",
+    onChainMetrics: "Активність в мережі",
+    balance: "Баланс",
+    walletAge: "Вік гаманця",
+    txCount: "Транзакції",
+    days: "днів",
+    txsSuffix: "транз.",
+    chainScore: "Оцінка блокчейну",
+    hybridNote: "Рейтинг базується на відгуках та активності в мережі."
+  }
+};
+
+function Card({ title, children, className = "" }: { title: string; children: ReactNode; className?: string }) {
+  return (
+    <section className={"rounded-[24px] border border-white/[0.04] bg-[#161821] p-6 shadow-2xl " + className}>
+      <h2 className="mb-6 text-xs font-bold uppercase tracking-widest text-[#727B88] flex items-center">{title}</h2>
+      {children}
+    </section>
+  );
+}
+
 export default function App() {
-  return <div>SafeChain Skeleton</div>;
+  const [lang, setLang] = useState<"en" | "uk">("uk");
+  const t = DICT[lang];
+
+  const getRiskMeta = (score: number | null) => {
+    if (score === null) return { label: t.riskNotRated, badgeClass: "bg-[#252A36] text-[#727B88] border border-[#2A303D]", scoreClass: "text-[#727B88]", progressClass: "bg-[#727B88]", scoreValue: "—", progressValue: 0 };
+    if (score >= 70) return { label: t.riskSafe, badgeClass: "bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20", scoreClass: "text-[#10B981]", progressClass: "bg-[#10B981] shadow-[0_0_12px_rgba(16,185,129,0.4)]", scoreValue: `${score}`, progressValue: score };
+    if (score >= 40) return { label: t.riskMedium, badgeClass: "bg-[#F59E0B]/10 text-[#F59E0B] border border-[#F59E0B]/20", scoreClass: "text-[#F59E0B]", progressClass: "bg-[#F59E0B] shadow-[0_0_12px_rgba(245,158,11,0.4)]", scoreValue: `${score}`, progressValue: score };
+    return { label: t.riskHigh, badgeClass: "bg-[#EF4444]/10 text-[#EF4444] border border-[#EF4444]/20", scoreClass: "text-[#EF4444]", progressClass: "bg-[#EF4444] shadow-[0_0_12px_rgba(239,68,68,0.4)]", scoreValue: `${score}`, progressValue: score };
+  };
+
+  const { connection } = useConnection();
+  const wallet = useWallet();
+  const provider = useMemo(() => {
+    if (!wallet.publicKey || !wallet.signTransaction || !wallet.signAllTransactions) return null;
+    return new anchor.AnchorProvider(connection, wallet as unknown as anchor.Wallet, { commitment: "confirmed" });
+  }, [connection, wallet]);
+
+  const [target, setTarget] = useState("");
+  const [reviewTone, setReviewTone] = useState<ReviewTone>("safe");
+  const [comment, setComment] = useState("");
+  const [targetUser, setTargetUser] = useState<UserView | null>(null);
+  const [reviews, setReviews] = useState<ReviewView[]>([]);
+  const [status, setStatus] = useState<string | null>(null);
+  const [statusType, setStatusType] = useState<"info" | "success" | "error">("info");
+  const [chainStats, setChainStats] = useState<any>(null);
+  const [isChecking, setIsChecking] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [reviewFilter, setReviewFilter] = useState<"all" | "safe" | "neutral" | "scam">("all");
+  const [txHistory, setTxHistory] = useState<TxView[]>([]);
+  const [balanceSeries, setBalanceSeries] = useState<BalancePoint[]>([]);
+  const [hoveredBalanceIndex, setHoveredBalanceIndex] = useState<number | null>(null);
+  const balanceChartRef = useRef<HTMLDivElement | null>(null);
+  const balanceSvgRef = useRef<SVGSVGElement | null>(null);
+
+  const displayStatus = status || t.statusInit;
+
+  const setInfo = (msg: string) => { setStatusType("info"); setStatus(msg); };
+  const setSuccess = (msg: string) => { setStatusType("success"); setStatus(msg); };
+  const setError = (msg: string) => { setStatusType("error"); setStatus(msg); };
+
+  const parseError = (error: unknown) => {
+    const text = `${error ?? ""}`;
+    if (text.includes("rejected")) return t.msgTxRejected;
+    if (text.includes("WalletSignTransactionError") || text.includes("Unexpected error")) return t.msgWalletSignRefused;
+    if (
+      text.includes("Attempt to debit an account") ||
+      text.includes("no record of a prior credit") ||
+      text.includes("insufficient funds")
+    ) return t.msgNoSol;
+    if (text.includes("CooldownNotPassed")) return t.msgCooldown;
+    if (text.includes("already exists")) return t.msgAlreadyReviewed;
+    return t.msgSubmitFailed;
+  };
+
+  const loadTarget = async () => {
+    if (!provider) { setError(t.msgConnectWallet); return; }
+  return <div>SafeChain Locales</div>;
 }
