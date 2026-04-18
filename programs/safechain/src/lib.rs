@@ -31,4 +31,49 @@ pub mod safechain {
         Ok(())
     }
 
+    pub fn add_review(ctx: Context<AddReview>, rating: u8, comment: String) -> Result<()> {
+        require!((1..=5).contains(&rating), SafeChainError::InvalidRating);
+        require!(
+            comment.as_bytes().len() <= MAX_COMMENT_LEN,
+            SafeChainError::CommentTooLong
+        );
+
+        let now = Clock::get()?.unix_timestamp;
+        let reviewer_user = &mut ctx.accounts.reviewer_user;
+        require!(
+            now - reviewer_user.last_review_ts >= COOLDOWN_SECONDS,
+            SafeChainError::CooldownNotPassed
+        );
+
+        let reviewer = ctx.accounts.reviewer.key();
+        let target_wallet = ctx.accounts.target.key();
+
+        initialize_user_if_needed(&mut ctx.accounts.target_user, target_wallet, ctx.bumps.target_user);
+        require!(reviewer != target_wallet, SafeChainError::SelfReviewForbidden);
+
+        let review = &mut ctx.accounts.review;
+        review.reviewer = reviewer;
+        review.target = target_wallet;
+        review.rating = rating;
+        review.comment = comment;
+        review.timestamp = now;
+        review.applied = false;
+        review.bump = ctx.bumps.review;
+
+        apply_review_to_target(&mut ctx.accounts.target_user, rating)?;
+        review.applied = true;
+        reviewer_user.last_review_ts = now;
+
+        emit!(ReviewAdded {
+            reviewer,
+            target: target_wallet,
+            rating,
+            ts: now,
+        });
+
+        Ok(())
+    }
+
+    pub fn update_score(ctx: Context<UpdateScore>) -> Result<()> {
+        let review = &mut ctx.accounts.review;
 }
