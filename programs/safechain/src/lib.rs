@@ -76,4 +76,56 @@ pub mod safechain {
 
     pub fn update_score(ctx: Context<UpdateScore>) -> Result<()> {
         let review = &mut ctx.accounts.review;
+        require!(!review.applied, SafeChainError::ReviewAlreadyApplied);
+
+        apply_review_to_target(&mut ctx.accounts.target_user, review.rating)?;
+        review.applied = true;
+
+        emit!(ScoreUpdated {
+            wallet: ctx.accounts.target_user.wallet,
+            score: ctx.accounts.target_user.score,
+            review_count: ctx.accounts.target_user.review_count,
+            flagged: ctx.accounts.target_user.flagged,
+            ts: Clock::get()?.unix_timestamp,
+        });
+
+        Ok(())
+    }
+}
+
+fn apply_review_to_target(user: &mut Account<UserAccount>, rating: u8) -> Result<()> {
+    let incoming_score = rating_to_score(rating);
+    let old_score = user.score as u32;
+    let new_score = ((old_score * (10_000 - SCORE_ALPHA_BPS))
+        + (incoming_score * SCORE_ALPHA_BPS))
+        / 10_000;
+
+    user.score = new_score as u8;
+    user.review_count = user
+        .review_count
+        .checked_add(1)
+        .ok_or(SafeChainError::MathOverflow)?;
+
+    if rating <= 2 {
+        user.low_rating_count = user
+            .low_rating_count
+            .checked_add(1)
+            .ok_or(SafeChainError::MathOverflow)?;
+    }
+
+    if user.review_count >= FLAG_MIN_REVIEWS {
+        let low_ratio = user
+            .low_rating_count
+            .checked_mul(100)
+            .ok_or(SafeChainError::MathOverflow)?
+            / user.review_count;
+        user.flagged = low_ratio >= FLAG_LOW_RATING_PERCENT;
+    }
+
+    Ok(())
+}
+
+fn initialize_user_if_needed(user: &mut Account<UserAccount>, wallet: Pubkey, bump: u8) {
+    if user.wallet == Pubkey::default() {
+        user.wallet = wallet;
 }
