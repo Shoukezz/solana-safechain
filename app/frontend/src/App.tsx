@@ -238,5 +238,135 @@ export default function App() {
 
   const loadTarget = async () => {
     if (!provider) { setError(t.msgConnectWallet); return; }
-  return <div>SafeChain Locales</div>;
+    setIsChecking(true); setInfo(t.btnChecking);
+    try {
+      const targetPubkey = new PublicKey(target);
+      const program = getProgram(provider) as any;
+      const targetPda = getUserPda(targetPubkey);
+      
+      const fetchSignatures = async (pubkey: PublicKey) => {
+        let all: any[] = [];
+        let before: string | undefined = undefined;
+        try {
+          while (all.length < 5000) {
+            const sigs = await mainnetConnection.getSignaturesForAddress(pubkey, { limit: 1000, before });
+            if (sigs.length === 0) break;
+            all.push(...sigs);
+            before = sigs[sigs.length - 1].signature;
+            if (sigs.length < 1000) break;
+          }
+        } catch (e) {
+          console.error("Sigs fetch error:", e);
+        }
+        return all;
+      };
+
+      const [user, reviewAccounts, balance, sigs] = await Promise.all([
+        program.account.userAccount.fetchNullable(targetPda).catch(() => null),
+        program.account.reviewAccount.all([{ memcmp: { offset: 8 + 32, bytes: targetPubkey.toBase58() } }]).catch(() => []),
+        mainnetConnection.getBalance(targetPubkey).catch((e) => { console.error("Balance fetch error:", e); return 0; }),
+        fetchSignatures(targetPubkey)
+      ]);
+      
+      const balanceSOL = balance / 1e9;
+      const txCount = sigs.length;
+      const txCountCapped = txCount >= 5000;
+      const blockTime = sigs[sigs.length - 1]?.blockTime;
+      const ageDays = blockTime ? Math.max(0, Math.floor((Date.now() / 1000 - blockTime) / 86400)) : 0;
+
+      let chainScore = 0;
+      if (balanceSOL > 5) chainScore += 40;
+      else if (balanceSOL > 0.5) chainScore += 20;
+      else if (balanceSOL > 0.05) chainScore += 10;
+
+      if (txCount >= 5000) chainScore += 30; // Max limit reached, highly active
+      else if (txCount > 500) chainScore += 20;
+      else if (txCount > 50) chainScore += 10;
+      else if (txCount > 0) chainScore += 5;
+
+      if (ageDays > 180) chainScore += 30;
+      else if (ageDays > 60) chainScore += 20;
+      else if (ageDays > 14) chainScore += 10;
+
+      setChainStats({ balance: balanceSOL.toFixed(2), txs: txCount, txsCapped: txCountCapped, age: ageDays, score: chainScore });
+
+      const recent = sigs.slice(0, 120);
+      if (recent.length > 0) {
+        const parsed = await mainnetConnection
+          .getParsedTransactions(recent.map((s: any) => s.signature), { maxSupportedTransactionVersion: 0 })
+          .catch(() => []);
+
+        const targetBase58 = targetPubkey.toBase58();
+        const history: TxView[] = recent
+          .map((s: any, i: number) => {
+            const tx = parsed?.[i];
+            if (!tx) return null;
+
+            const keys = tx.transaction.message.accountKeys.map((k: any) =>
+              "pubkey" in k ? k.pubkey.toBase58() : k.toBase58()
+            );
+            const idx = keys.indexOf(targetBase58);
+            let deltaSol = 0;
+            let balanceAfterSol: number | null = null;
+            if (idx >= 0 && tx.meta?.preBalances && tx.meta?.postBalances) {
+              deltaSol = (tx.meta.postBalances[idx] - tx.meta.preBalances[idx]) / LAMPORTS_PER_SOL;
+              balanceAfterSol = tx.meta.postBalances[idx] / LAMPORTS_PER_SOL;
+            }
+
+            return {
+              signature: s.signature,
+              slot: tx.slot,
+              time: tx.blockTime ?? s.blockTime ?? null,
+              status: tx.meta?.err ? "failed" : "success",
+              deltaSol,
+              balanceAfterSol,
+            } as TxView;
+          })
+          .filter(Boolean) as TxView[];
+
+        setTxHistory(history);
+
+        if (history.length > 0) {
+          const chronological = [...history].reverse();
+          const points = chronological
+            .filter((h) => h.balanceAfterSol !== null)
+            .map((h) => ({
+              label: h.time ? new Date(h.time * 1000).toLocaleString() : `#${h.slot}`,
+              value: Number((h.balanceAfterSol as number).toFixed(4)),
+            }));
+
+          const currentPoint: BalancePoint = { label: "Now", value: Number(balanceSOL.toFixed(4)) };
+          const series: BalancePoint[] = points.length > 0 ? [...points] : [currentPoint];
+          const last = series[series.length - 1];
+          if (!last || (last.label !== "Now" && Math.abs(last.value - currentPoint.value) > 0.0001)) {
+            series.push(currentPoint);
+          } else if (last && last.label === "Now") {
+            last.value = currentPoint.value;
+          }
+
+          setBalanceSeries(series);
+        } else {
+          setBalanceSeries([{ label: "Now", value: Number(balanceSOL.toFixed(4)) }]);
+        }
+      } else {
+        setTxHistory([]);
+        setBalanceSeries([{ label: "Now", value: Number(balanceSOL.toFixed(4)) }]);
+      }
+
+      const userProfileScore = user ? Number(user.score) : null;
+      let finalScore = chainScore;
+      if (userProfileScore !== null) {
+          // If community thinks it's a scam (<40), hard limit the score 
+          if (userProfileScore < 40) finalScore = Math.min(chainScore, userProfileScore);
+          else finalScore = Math.floor((chainScore * 0.7) + (userProfileScore * 0.3));        }
+
+      setTargetUser({
+        wallet: targetPubkey.toBase58(),
+        score: finalScore,        reviewCount: user ? Number(user.reviewCount) : 0,
+        lowRatingCount: user ? Number(user.lowRatingCount) : 0,
+        flagged: user ? user.flagged : false,
+        profileExists: !!user
+      });
+
+  return <div>SafeChain UI Setup</div>;
 }
