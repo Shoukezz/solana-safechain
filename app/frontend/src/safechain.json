@@ -1,0 +1,556 @@
+{
+  "version": "0.1.0",
+  "name": "safechain",
+  "address": "CTChmby72HzRKRZ2KeytRPF4AQeVkmnW6qGNCgwLhmA6",
+  "instructions": [
+    {
+      "name": "createUser",
+      "discriminator": [
+        108,
+        227,
+        130,
+        130,
+        252,
+        109,
+        75,
+        218
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "isMut": true,
+          "isSigner": true,
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true,
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": false,
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false,
+          "writable": false,
+          "signer": false
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "addReview",
+      "discriminator": [
+        0,
+        87,
+        29,
+        155,
+        61,
+        216,
+        35,
+        190
+      ],
+      "accounts": [
+        {
+          "name": "reviewer",
+          "isMut": true,
+          "isSigner": true,
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true,
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "reviewerUser",
+          "isMut": true,
+          "isSigner": false,
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "target",
+          "isMut": false,
+          "isSigner": false,
+          "writable": false,
+          "signer": false
+        },
+        {
+          "name": "targetUser",
+          "isMut": true,
+          "isSigner": false,
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "review",
+          "isMut": true,
+          "isSigner": false,
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false,
+          "writable": false,
+          "signer": false
+        }
+      ],
+      "args": [
+        {
+          "name": "rating",
+          "type": "u8"
+        },
+        {
+          "name": "comment",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "updateScore",
+      "discriminator": [
+        188,
+        226,
+        238,
+        41,
+        14,
+        241,
+        105,
+        215
+      ],
+      "accounts": [
+        {
+          "name": "targetUser",
+          "isMut": true,
+          "isSigner": false,
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "review",
+          "isMut": true,
+          "isSigner": false,
+          "writable": true,
+          "signer": false
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "UserAccount",
+      "discriminator": [
+        211,
+        33,
+        136,
+        16,
+        186,
+        110,
+        242,
+        127
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "wallet",
+            "type": "pubkey"
+          },
+          {
+            "name": "score",
+            "type": "u8"
+          },
+          {
+            "name": "reviewCount",
+            "type": "u32"
+          },
+          {
+            "name": "lowRatingCount",
+            "type": "u32"
+          },
+          {
+            "name": "flagged",
+            "type": "bool"
+          },
+          {
+            "name": "lastReviewTs",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ReviewAccount",
+      "discriminator": [
+        119,
+        177,
+        213,
+        232,
+        143,
+        161,
+        255,
+        66
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "reviewer",
+            "type": "pubkey"
+          },
+          {
+            "name": "target",
+            "type": "pubkey"
+          },
+          {
+            "name": "rating",
+            "type": "u8"
+          },
+          {
+            "name": "comment",
+            "type": "string"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          },
+          {
+            "name": "applied",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "userCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "wallet",
+            "type": "pubkey"
+          },
+          {
+            "name": "score",
+            "type": "u8"
+          },
+          {
+            "name": "ts",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "reviewAdded",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "reviewer",
+            "type": "pubkey"
+          },
+          {
+            "name": "target",
+            "type": "pubkey"
+          },
+          {
+            "name": "rating",
+            "type": "u8"
+          },
+          {
+            "name": "ts",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "scoreUpdated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "wallet",
+            "type": "pubkey"
+          },
+          {
+            "name": "score",
+            "type": "u8"
+          },
+          {
+            "name": "reviewCount",
+            "type": "u32"
+          },
+          {
+            "name": "flagged",
+            "type": "bool"
+          },
+          {
+            "name": "ts",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UserAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "wallet",
+            "type": "pubkey"
+          },
+          {
+            "name": "score",
+            "type": "u8"
+          },
+          {
+            "name": "reviewCount",
+            "type": "u32"
+          },
+          {
+            "name": "lowRatingCount",
+            "type": "u32"
+          },
+          {
+            "name": "flagged",
+            "type": "bool"
+          },
+          {
+            "name": "lastReviewTs",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ReviewAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "reviewer",
+            "type": "pubkey"
+          },
+          {
+            "name": "target",
+            "type": "pubkey"
+          },
+          {
+            "name": "rating",
+            "type": "u8"
+          },
+          {
+            "name": "comment",
+            "type": "string"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          },
+          {
+            "name": "applied",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "userCreated",
+      "discriminator": [
+        145,
+        177,
+        42,
+        214,
+        0,
+        65,
+        40,
+        69
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "wallet",
+            "type": "pubkey",
+            "index": false
+          },
+          {
+            "name": "score",
+            "type": "u8",
+            "index": false
+          },
+          {
+            "name": "ts",
+            "type": "i64",
+            "index": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "reviewAdded",
+      "discriminator": [
+        161,
+        172,
+        248,
+        35,
+        209,
+        207,
+        160,
+        129
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "reviewer",
+            "type": "pubkey",
+            "index": false
+          },
+          {
+            "name": "target",
+            "type": "pubkey",
+            "index": false
+          },
+          {
+            "name": "rating",
+            "type": "u8",
+            "index": false
+          },
+          {
+            "name": "ts",
+            "type": "i64",
+            "index": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "scoreUpdated",
+      "discriminator": [
+        175,
+        144,
+        206,
+        62,
+        108,
+        213,
+        230,
+        183
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "wallet",
+            "type": "pubkey",
+            "index": false
+          },
+          {
+            "name": "score",
+            "type": "u8",
+            "index": false
+          },
+          {
+            "name": "reviewCount",
+            "type": "u32",
+            "index": false
+          },
+          {
+            "name": "flagged",
+            "type": "bool",
+            "index": false
+          },
+          {
+            "name": "ts",
+            "type": "i64",
+            "index": false
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidRating",
+      "msg": "Rating must be between 1 and 5"
+    },
+    {
+      "code": 6001,
+      "name": "CommentTooLong",
+      "msg": "Comment exceeds max allowed length"
+    },
+    {
+      "code": 6002,
+      "name": "MathOverflow",
+      "msg": "Math overflow"
+    },
+    {
+      "code": 6003,
+      "name": "InvalidReviewerProfile",
+      "msg": "Reviewer profile does not match signer"
+    },
+    {
+      "code": 6004,
+      "name": "SelfReviewForbidden",
+      "msg": "You cannot review your own wallet"
+    },
+    {
+      "code": 6005,
+      "name": "CooldownNotPassed",
+      "msg": "Cooldown period has not passed"
+    },
+    {
+      "code": 6006,
+      "name": "ReviewAlreadyApplied",
+      "msg": "Review already applied"
+    },
+    {
+      "code": 6007,
+      "name": "ReviewTargetMismatch",
+      "msg": "Review target mismatch"
+    }
+  ],
+  "metadata": {
+    "address": "CTChmby72HzRKRZ2KeytRPF4AQeVkmnW6qGNCgwLhmA6"
+  }
+}
