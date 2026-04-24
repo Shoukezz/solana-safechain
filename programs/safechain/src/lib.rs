@@ -128,4 +128,54 @@ fn apply_review_to_target(user: &mut Account<UserAccount>, rating: u8) -> Result
 fn initialize_user_if_needed(user: &mut Account<UserAccount>, wallet: Pubkey, bump: u8) {
     if user.wallet == Pubkey::default() {
         user.wallet = wallet;
+        user.score = 50;
+        user.review_count = 0;
+        user.low_rating_count = 0;
+        user.flagged = false;
+        user.last_review_ts = 0;
+        user.bump = bump;
+    }
+}
+
+fn rating_to_score(rating: u8) -> u32 {
+    ((rating.saturating_sub(1)) as u32) * 25
+}
+
+#[derive(Accounts)]
+pub struct CreateUser<'info> {
+    #[account()]
+    pub authority: Signer<'info>,
+
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    #[account(
+        init,
+        payer = payer,
+        space = 8 + UserAccount::LEN,
+        seeds = [b"user", authority.key().as_ref()],
+        bump
+    )]
+    pub user: Account<'info, UserAccount>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct AddReview<'info> {
+    #[account()]
+    pub reviewer: Signer<'info>,
+
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"user", reviewer.key().as_ref()],
+        bump = reviewer_user.bump,
+        constraint = reviewer_user.wallet == reviewer.key() @ SafeChainError::InvalidReviewerProfile
+    )]
+    pub reviewer_user: Account<'info, UserAccount>,
+
+    /// CHECK: target wallet pubkey only, no data is read from this account
 }
