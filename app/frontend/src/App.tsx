@@ -368,5 +368,185 @@ export default function App() {
         profileExists: !!user
       });
 
-  return <div>SafeChain UI Setup</div>;
+      setReviews(reviewAccounts.map((r: any) => ({ reviewer: r.account.reviewer.toBase58(), rating: r.account.rating, comment: r.account.comment, timestamp: Number(r.account.timestamp) })).sort((a: ReviewView, b: ReviewView) => b.timestamp - a.timestamp));
+
+      setSuccess(user ? t.msgLoadedProfile : t.msgLoadedBaseline);
+    } catch (e) {
+      console.error(e);
+      setError(t.msgInvalidAddress); setTargetUser(null); setReviews([]); setChainStats(null); setTxHistory([]); setBalanceSeries([]);
+    } finally { setIsChecking(false); }
+  };
+
+  const submitReview = async () => {
+    if (!provider || !wallet.publicKey) { setError(t.errConnect); return; }
+    if (!target.trim()) { setError(t.errTarget); return; }
+    if (!comment.trim()) { setError(t.errComment); return; }
+    setIsSubmitting(true); setInfo(`${t.btnSubmitting} ${t.msgConfirmWallet}`);
+
+    try {
+      const targetPubkey = new PublicKey(target);
+      const program = getProgram(provider) as any;
+      const reviewerUser = getUserPda(wallet.publicKey);
+      const targetUserPda = getUserPda(targetPubkey);
+      const review = getReviewPda(targetPubkey, wallet.publicKey);
+      const sponsor = getSponsorKeypair();
+
+      const sponsorBalance = await connection.getBalance(sponsor.publicKey, "confirmed");
+      if (sponsorBalance < 0.01 * LAMPORTS_PER_SOL) {
+        throw new Error("insufficient funds: sponsor wallet");
+      }
+
+      const tx = new Transaction();
+
+      tx.feePayer = sponsor.publicKey;
+
+      const existingReviewer = await program.account.userAccount.fetchNullable(reviewerUser);
+      console.log("existingReviewer:", existingReviewer);
+
+      if (!existingReviewer) {
+        console.log("Creating user for:", wallet.publicKey.toBase58());
+        const createUserIx = await program.methods
+          .createUser()
+          .accounts({
+            authority: wallet.publicKey,
+            payer: sponsor.publicKey,
+            user: reviewerUser,
+            systemProgram: SystemProgram.programId,
+          })
+          .instruction();
+        tx.add(createUserIx);
+      }
+
+      console.log("Adding addReview instruction.");
+      const addReviewIx = await program.methods
+        .addReview(toneToRating[reviewTone], comment)
+        .accounts({
+          reviewer: wallet.publicKey,
+          payer: sponsor.publicKey,
+          reviewerUser,
+          target: targetPubkey,
+          targetUser: targetUserPda,
+          review,
+          systemProgram: SystemProgram.programId,
+        })
+        .instruction();
+      tx.add(addReviewIx);
+
+      const latestBlockhash = await connection.getLatestBlockhash("confirmed");
+      console.log("Got blockhash:", latestBlockhash.blockhash);
+      tx.recentBlockhash = latestBlockhash.blockhash;
+      
+
+      console.log("Prompting wallet to sign...");
+      tx.partialSign(sponsor);
+      const signedTx = await wallet.signTransaction!(tx);
+      console.log("Wallet signed:", signedTx);
+
+      const sig = await connection.sendRawTransaction(signedTx.serialize(), { skipPreflight: false });
+      await connection.confirmTransaction({
+        signature: sig,
+        blockhash: latestBlockhash.blockhash,
+        lastValidBlockHeight: latestBlockhash.lastValidBlockHeight
+      }, "confirmed");
+
+      setComment(""); setReviewTone("safe"); 
+      setSuccess(`✅ ${t.msgReviewCreated} ${sig.slice(0, 8)}...${sig.slice(-8)}`);
+      await loadTarget();
+    } catch (error) {
+      console.error(error);
+      setError(parseError(error));
+    } finally { setIsSubmitting(false); }
+  };
+
+  const riskMeta = targetUser ? getRiskMeta(targetUser.score) : null;
+  const filteredReviews = reviews.filter((r) =>
+    reviewFilter === "all"
+      ? true
+      : reviewFilter === "safe"
+        ? r.rating >= 4
+        : reviewFilter === "neutral"
+          ? r.rating === 3
+          : r.rating <= 2
+  );
+  const avgRating = reviews.length ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(2) : "0.00";
+  const scamShare = reviews.length ? Math.round((reviews.filter((r) => r.rating <= 2).length / reviews.length) * 100) : 0;
+  const nowSec = Date.now() / 1000;
+  const reviews7d = reviews.filter((r) => nowSec - r.timestamp <= 7 * 86400).length;
+  const reviews30d = reviews.filter((r) => nowSec - r.timestamp <= 30 * 86400).length;
+  const gaugeScore = Math.max(0, Math.min(100, targetUser?.score ?? 0));
+  const gaugeAngleRad = Math.PI * (1 - gaugeScore / 100);
+  const gaugeCx = 180;
+  const gaugeCy = 180;
+  const gaugeR = 116;
+  const dirX = Math.cos(gaugeAngleRad);
+  const dirY = -Math.sin(gaugeAngleRad);
+  const needleTipX = gaugeCx + dirX * (gaugeR - 10);
+  const needleTipY = gaugeCy + dirY * (gaugeR - 10);
+  const needleTailX = gaugeCx - dirX * 18;
+  const needleTailY = gaugeCy - dirY * 18;
+  const perpX = -dirY;
+  const perpY = dirX;
+  const needleLeftX = needleTailX + perpX * 6;
+  const needleLeftY = needleTailY + perpY * 6;
+  const needleRightX = needleTailX - perpX * 6;
+  const needleRightY = needleTailY - perpY * 6;
+  const chartValues = balanceSeries.map((p) => p.value);
+  const minV = chartValues.length ? Math.min(...chartValues) : 0;
+  const maxV = chartValues.length ? Math.max(...chartValues) : 1;
+  const chartPoints = balanceSeries
+    .map((p, i) => {
+      const x = balanceSeries.length > 1 ? (i / (balanceSeries.length - 1)) * 100 : 0;
+      const y = maxV === minV ? 50 : 100 - ((p.value - minV) / (maxV - minV)) * 100;
+      return `${x},${y}`;
+    })
+    .join(" ");
+  const chartData = balanceSeries.map((p, i) => {
+    const x = balanceSeries.length > 1 ? (i / (balanceSeries.length - 1)) * 100 : 0;
+    const y = maxV === minV ? 50 : 100 - ((p.value - minV) / (maxV - minV)) * 100;
+    return { ...p, x, y };
+  });
+  const hoveredPoint = hoveredBalanceIndex !== null ? chartData[hoveredBalanceIndex] : null;
+  const chartSvgW = 1000;
+  const chartSvgH = 360;
+  const chartPadX = 68;
+  const chartPadY = 26;
+  const chartPlotW = chartSvgW - chartPadX * 2;
+  const chartPlotH = chartSvgH - chartPadY * 2;
+  const chartPlotData = chartData.map((p) => ({
+    ...p,
+    sx: chartPadX + (p.x / 100) * chartPlotW,
+    sy: chartPadY + (p.y / 100) * chartPlotH,
+  }));
+  const chartLinePath = chartPlotData
+    .map((p, i) => `${i === 0 ? "M" : "L"} ${p.sx} ${p.sy}`)
+    .join(" ");
+  const chartAreaPath = chartPlotData.length
+    ? `${chartLinePath} L ${chartPadX + chartPlotW} ${chartPadY + chartPlotH} L ${chartPadX} ${chartPadY + chartPlotH} Z`
+    : "";
+  const hoveredPlotPoint = hoveredBalanceIndex !== null ? chartPlotData[hoveredBalanceIndex] : null;
+  const yTicks = [0, 1, 2, 3, 4].map((i) => {
+    const ratio = i / 4;
+    const value = maxV - (maxV - minV) * ratio;
+    const y = chartPadY + chartPlotH * ratio;
+    return { y, value };
+  });
+
+  return (
+    <div className="min-h-screen bg-[#0B0E14] text-white selection:bg-[#3260F3]/30 font-sans">
+      {/* Header Pipeline */}
+      <header className="sticky top-0 z-50 border-b border-white/[0.04] bg-[#0B0E14]/80 backdrop-blur-xl px-6 py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+              <div className="w-8 h-8 rounded-[10px] bg-gradient-to-br from-[#3260F3] to-[#25BDDF] flex items-center justify-center shadow-lg shadow-[#3260F3]/30">
+                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              </div>
+              {t.brand}
+            </h1>
+            <span className="hidden md:inline-flex items-center rounded-lg bg-white/[0.05] border border-white/[0.05] px-3 py-1 text-xs font-semibold text-[#727B88]">{t.tagline}</span>
+          </div>
+          <div className="flex items-center gap-3">
+  return <div>SafeChain Logic Setup</div>;
 }
