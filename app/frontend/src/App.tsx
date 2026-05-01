@@ -548,5 +548,160 @@ export default function App() {
             <span className="hidden md:inline-flex items-center rounded-lg bg-white/[0.05] border border-white/[0.05] px-3 py-1 text-xs font-semibold text-[#727B88]">{t.tagline}</span>
           </div>
           <div className="flex items-center gap-3">
-  return <div>SafeChain Logic Setup</div>;
+            <div className="relative group">
+              <button className="flex items-center justify-center gap-2 h-10 px-4 rounded-[12px] border border-white/[0.05] bg-[#161821] text-xs font-bold text-[#A8B2C1] hover:bg-[#1A1D27] hover:text-white transition">
+                <span>{lang === "uk" ? "🇺🇦 UK" : "🇬🇧 EN"}</span>
+                <svg className="w-3 h-3 text-[#727B88]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              <div className="absolute right-0 mt-2 w-36 origin-top-right rounded-[16px] border border-white/[0.05] bg-[#161821] p-1.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all shadow-2xl backdrop-blur-xl">
+                <button
+                  onClick={() => setLang("uk")}
+                  className={`flex w-full items-center gap-3 rounded-[10px] px-3 py-2 text-xs font-bold transition ${lang === "uk" ? "bg-[#3260F3]/10 text-[#3260F3]" : "text-[#A8B2C1] hover:bg-white/[0.04] hover:text-white"}`}
+                >
+                  <span>🇺🇦</span> Українська
+                </button>
+                <button
+                  onClick={() => setLang("en")}
+                  className={`flex w-full items-center gap-3 rounded-[10px] px-3 py-2 text-xs font-bold transition ${lang === "en" ? "bg-[#3260F3]/10 text-[#3260F3]" : "text-[#A8B2C1] hover:bg-white/[0.04] hover:text-white"}`}
+                >
+                  <span>🇬🇧</span> English
+                </button>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {wallet.wallet && !wallet.connected && (
+                <button
+                  onClick={() => {
+                    try { wallet.select(null as any); } catch {}
+                    localStorage.removeItem('walletName');
+                  }}
+                  className="flex h-10 w-10 items-center justify-center rounded-[12px] border border-white/[0.05] bg-[#161821] text-[#727B88] hover:bg-[#EF4444]/10 hover:border-[#EF4444]/30 hover:text-[#EF4444] transition"
+                  title="Отменить выбор кошелька"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              )}
+              <WalletMultiButton className="!bg-[#3260F3] hover:!bg-[#284DD4] !h-10 !text-xs !font-bold !px-5 !rounded-[12px] !transition" />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Grid Architecture */}
+      <main className="max-w-7xl mx-auto p-6 md:py-10 grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-8 items-start">
+        
+        {/* Left Column: Context & Results */}
+        <div className="space-y-6">
+          
+          <div>
+            <h2 className="text-[32px] sm:text-[40px] font-extrabold tracking-tight text-white leading-tight">
+              {t.checkRep}
+            </h2>
+            <p className="mt-3 text-sm sm:text-base text-[#A8B2C1] font-medium">{t.subtitle}</p>
+          </div>
+
+            <div className="relative group">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-[#3260F3] to-[#25BDDF] rounded-full blur opacity-20 group-hover:opacity-30 transition duration-500"></div>
+              <div className="relative flex flex-col sm:flex-row gap-3 bg-[#11131A] rounded-3xl sm:rounded-full p-2.5 border border-white/[0.04]">
+                <input
+                  className="flex-1 bg-transparent px-5 py-3 text-sm font-semibold text-white placeholder:text-[#525B69] outline-none"
+                  placeholder={t.placeholder}
+                  value={target}
+                  onChange={(e) => {
+                    setTarget(e.target.value);
+                    setShowProfile(false);
+                    setStatus(null); // Reset status when typing
+                    setStatusType("info");
+                  }}
+                />
+                <button
+                  className="rounded-full bg-[#3260F3] px-8 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#3260F3]/25 transition-all hover:scale-[1.02] hover:bg-[#284DD4] active:scale-[0.98] disabled:scale-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={loadTarget}
+                  disabled={isChecking || !target.trim()}
+                >
+                  {isChecking ? t.btnChecking : t.btnCheck}
+                </button>
+              </div>
+            </div>
+
+            {displayStatus && (
+              <div className={`rounded-[16px] border px-5 py-4 text-sm font-semibold flex items-center gap-3 backdrop-blur-md ${
+                statusType === "success" ? "border-[#10B981]/20 bg-[#10B981]/10 text-[#10B981]" :
+                statusType === "error" ? "border-[#EF4444]/20 bg-[#EF4444]/10 text-[#EF4444]" :
+                "border-white/[0.05] bg-[#161821]/80 text-[#727B88]"
+              }`}>
+                <div className={`w-2 h-2 rounded-full ${statusType === "success" ? "bg-[#10B981]" : statusType === "error" ? "bg-[#EF4444]" : "bg-[#727B88]"}`} />
+                {displayStatus}
+              </div>
+            )}
+
+          {targetUser && riskMeta && (
+            <div className="space-y-6 animate-in slide-in-from-bottom-6 duration-700 fade-in zoom-in-95">
+              <Card title={t.resultTitle} className="relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-[#3260F3] opacity-[0.03] blur-[80px] rounded-full pointer-events-none"></div>
+                <div className="flex items-start justify-between relative z-10">
+                  <div>
+                    <p className="text-sm font-semibold tracking-wide text-[#727B88] mb-2">{t.trustScore}</p>
+                    <p className={`text-6xl font-extrabold tracking-tighter ${riskMeta.scoreClass}`}>{riskMeta.scoreValue}</p>
+                  </div>
+                  <span className={`rounded-full border px-5 py-2 text-sm font-bold shadow-sm ${riskMeta.badgeClass}`}>
+                    {riskMeta.label}
+                  </span>
+                </div>
+                <div className="mt-8 h-2.5 overflow-hidden rounded-full bg-[#1A1D27] border border-white/[0.02]">
+                  <div className={`h-full rounded-full transition-all duration-1000 ease-out ${riskMeta.progressClass}`} style={{ width: `${riskMeta.progressValue}%` }} />
+                </div>
+                <div className="mt-8 grid grid-cols-2 gap-4">
+                  <div className="rounded-[16px] bg-[#11131A] p-4 border border-white/[0.04]">
+                    <p className="text-xs font-semibold text-[#727B88]">{t.wallet}</p>
+                    <p className="mt-2 font-mono text-sm font-bold text-white tracking-widest">{shortAddress(targetUser.wallet)}</p>
+                  </div>
+                  <div className="rounded-[16px] bg-[#11131A] p-4 border border-white/[0.04]">
+                    <p className="text-xs font-semibold text-[#727B88]">{t.reviews}</p>
+                    <p className="mt-2 text-sm font-bold text-white">{targetUser.reviewCount}</p>
+                  </div>
+                </div>
+                {!targetUser.profileExists && <p className="mt-5 flex items-center gap-2 text-xs font-semibold text-[#F59E0B]">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                  {t.notRatedPrompt}</p>}
+                <button
+                  onClick={() => setShowProfile((v) => !v)}
+                  className="mt-5 w-full h-11 rounded-[12px] bg-[#11131A] border border-white/[0.06] text-sm font-bold text-[#A8B2C1] hover:text-white hover:border-[#3260F3]/40 transition"
+                >
+                  {showProfile ? t.btnHideProfile : t.btnOpenProfile}
+                </button>
+              </Card>
+
+              {chainStats && (
+              <Card title={t.onChainMetrics}>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex-none rounded-[16px] bg-[#11131A] p-5 border border-white/[0.04] sm:w-36 flex flex-col justify-center items-center text-center">
+                    <p className="text-xs font-semibold text-[#727B88] mb-2">{t.chainScore}</p>
+                    <p className="text-4xl font-extrabold text-[#3260F3]">{chainStats.score}</p>
+                  </div>
+                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4 rounded-[16px] bg-[#11131A] p-5 border border-white/[0.04]">
+                    <div className="flex flex-col justify-center">
+                      <p className="text-xs font-semibold text-[#727B88] mb-1.5">{t.balance}</p>
+                      <p className="font-mono text-base font-bold text-white">{chainStats.balance} <span className="text-[#3260F3] text-sm">SOL</span></p>
+                    </div>
+                    <div className="flex flex-col justify-center">
+                      <p className="text-xs font-semibold text-[#727B88] mb-1.5">{t.txCount}</p>
+                      <p className="font-mono text-base font-bold text-white">{chainStats.txsCapped ? `${chainStats.txs}+` : chainStats.txs} <span className="text-[#A8B2C1] text-xs uppercase ml-1 tracking-wider">{t.txsSuffix}</span></p>
+                    </div>
+                    <div className="flex flex-col justify-center">
+                      <p className="text-xs font-semibold text-[#727B88] mb-1.5">{t.walletAge}</p>
+                      <p className="font-mono text-base font-bold text-white">{chainStats.age} <span className="text-[#A8B2C1] text-xs uppercase ml-1 tracking-wider">{t.days}</span></p>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-5 pt-5 border-t border-white/[0.04] flex items-start sm:items-center gap-3">
+                  <div className="p-1.5 rounded-lg bg-[#3260F3]/10">
+              </div>
+            </div>
+          </Card>
+  </main>
+  </div>
+  );
 }
