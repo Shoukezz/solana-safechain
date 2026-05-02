@@ -178,4 +178,44 @@ pub struct AddReview<'info> {
     pub reviewer_user: Account<'info, UserAccount>,
 
     /// CHECK: target wallet pubkey only, no data is read from this account
+    pub target: UncheckedAccount<'info>,
+
+    #[account(
+        init_if_needed,
+        payer = payer,
+        space = 8 + UserAccount::LEN,
+        seeds = [b"user", target.key().as_ref()],
+        bump
+    )]
+    pub target_user: Account<'info, UserAccount>,
+
+    #[account(
+        init,
+        payer = payer,
+        space = 8 + ReviewAccount::LEN,
+        seeds = [b"review", target.key().as_ref(), reviewer.key().as_ref()],
+        bump
+    )]
+    pub review: Account<'info, ReviewAccount>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct UpdateScore<'info> {
+    #[account(
+        mut,
+        seeds = [b"user", target_user.wallet.as_ref()],
+        bump = target_user.bump
+    )]
+    pub target_user: Account<'info, UserAccount>,
+
+    #[account(
+        mut,
+        seeds = [b"review", target_user.wallet.as_ref(), review.reviewer.as_ref()],
+        bump = review.bump,
+        constraint = review.target == target_user.wallet @ SafeChainError::ReviewTargetMismatch
+    )]
+    pub review: Account<'info, ReviewAccount>,
+}
 }
