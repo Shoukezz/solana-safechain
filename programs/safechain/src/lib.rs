@@ -218,4 +218,34 @@ pub struct UpdateScore<'info> {
     )]
     pub review: Account<'info, ReviewAccount>,
 }
+
+#[account]
+pub struct UserAccount {
+    pub wallet: Pubkey,
+    pub score: u8,
+    pub review_count: u32,
+    pub low_rating_count: u32,
+    pub flagged: bool,
+    pub last_review_ts: i64,
+    pub bump: u8,
+}
+
+impl UserAccount {
+    pub const LEN: usize =
+        32 + // wallet
+        1 + // score
+        4 + // review_count
+        4 + // low_rating_count
+        1 + // flagged
+        8 + // last_review_ts
+        1; // bump
+}
+
+#[account]
+pub struct ReviewAccount {
+    pub reviewer: Pubkey,
+    pub target: Pubkey,
+    pub rating: u8,
+    pub comment: String,
+    pub timestamp: i64,
 }
