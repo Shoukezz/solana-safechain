@@ -698,10 +698,142 @@ export default function App() {
                 </div>
                 <div className="mt-5 pt-5 border-t border-white/[0.04] flex items-start sm:items-center gap-3">
                   <div className="p-1.5 rounded-lg bg-[#3260F3]/10">
+                    <svg className="w-4 h-4 text-[#3260F3]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  </div>
+                  <p className="text-xs font-medium text-[#727B88]">{t.hybridNote}</p>
+                </div>
+              </Card>
+              )}
+
+              <Card title={t.recentReviews}>
+                <div className="space-y-3">
+                  {reviews.length === 0 ? (
+                    <div className="py-8 text-center border border-dashed border-white/[0.05] rounded-[16px] bg-[#11131A]/50">
+                      <p className="text-sm font-semibold text-[#727B88]">{t.noReviews}</p>
+                    </div>
+                  ) : (
+                    reviews.slice(0, 5).map((r, i) => (
+                      <div key={i} className="rounded-[16px] bg-[#11131A] p-5 border border-white/[0.02] hover:border-white/[0.08] transition duration-300">
+                        <div className="flex justify-between items-center mb-3">
+                          <span className={`inline-flex items-center justify-center px-3 py-1 rounded-[8px] text-xs font-bold ${
+                            r.rating >= 4 ? 'bg-[#10B981]/10 text-[#10B981]' : r.rating === 3 ? 'bg-[#F59E0B]/10 text-[#F59E0B]' : 'bg-[#EF4444]/10 text-[#EF4444]'
+                          }`}>{r.rating} / 5</span>
+                          <span className="text-xs font-medium text-[#727B88] bg-white/[0.02] px-3 py-1 rounded-full">{new Date(r.timestamp * 1000).toLocaleDateString()}</span>
+                        </div>
+                        <p className="text-[15px] font-medium leading-relaxed text-white">{r.comment}</p>
+                        <div className="mt-4 pt-3 border-t border-white/[0.04] flex items-center gap-2">
+                          <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-[#3260F3] to-[#A8B2C1]"></div>
+                          <p className="text-xs font-bold font-mono text-[#727B88]">{shortAddress(r.reviewer)}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </Card>
+
+
+            </div>
+          )}
+        </div>
+
+        {/* Right Column: Interaction */}
+        <div className="sticky top-[90px]">
+          <Card title={t.leaveReview}>
+            <div className="space-y-5">
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wide text-[#727B88] mb-3 block">Rating Tone</label>
+                <select
+                  className="w-full h-12 rounded-[12px] border border-white/[0.06] bg-[#11131A] px-4 text-sm font-bold text-white outline-none focus:border-[#3260F3] focus:ring-1 focus:ring-[#3260F3] transition"
+                  value={reviewTone}
+                  onChange={(e) => setReviewTone(e.target.value as ReviewTone)}
+                >
+                  <option value="safe" className="font-semibold text-[#10B981] bg-[#161821]">🟢 {t.toneSafe}</option>
+                  <option value="neutral" className="font-semibold text-[#F59E0B] bg-[#161821]">🟡 {t.toneNeutral}</option>
+                  <option value="scam" className="font-semibold text-[#EF4444] bg-[#161821]">🔴 {t.toneScam}</option>
+                </select>
               </div>
+
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wide text-[#727B88] mb-3 block">Comment</label>
+                <textarea
+                  className="min-h-[160px] w-full rounded-[16px] border border-white/[0.06] bg-[#11131A] p-4 text-sm font-medium text-white placeholder:text-[#525B69] outline-none focus:border-[#3260F3] focus:ring-1 focus:ring-[#3260F3] resize-none transition"
+                  placeholder={t.commentPlaceholder}
+                  value={comment}
+                  maxLength={280}
+                  onChange={(e) => setComment(e.target.value)}
+                />
+                <div className="text-right mt-2 text-xs font-semibold text-[#525B69]">{comment.length}/280</div>
+              </div>
+
+              <button
+                className="w-full h-14 rounded-[16px] bg-gradient-to-r from-[#3260F3] to-[#25BDDF] text-[15px] font-extrabold text-white shadow-lg shadow-[#3260F3]/25 transition hover:scale-[1.02] active:scale-[0.98] disabled:scale-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={submitReview}
+                disabled={isSubmitting || !wallet.connected || !target.trim() || !comment.trim()}
+              >
+                {isSubmitting ? t.btnSubmitting : t.btnSubmit}
+              </button>
+
+              {(!wallet.connected || !target.trim() || !comment.trim()) && (
+                <div className="p-2 flex justify-center text-center">
+                  <p className="text-[12px] font-medium text-[#727B88]">
+                    {!wallet.connected ? t.errConnect : !target.trim() ? t.errTarget : t.errComment}
+                  </p>
+                </div>
+              )}
             </div>
           </Card>
-  </main>
-  </div>
+        </div>
+
+      </main>
+
+      {showProfile && targetUser && riskMeta && (
+        <div className="fixed inset-0 z-[70] bg-[#0B0E14]/95 backdrop-blur-md overflow-y-auto">
+          <div className="max-w-7xl mx-auto p-6 md:py-10 space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">{t.profilePageTitle}</h2>
+              <button
+                onClick={() => setShowProfile(false)}
+                className="h-10 px-4 rounded-[12px] border border-white/[0.08] bg-[#161821] text-sm font-bold text-[#A8B2C1] hover:text-white"
+              >
+                {t.closeProfile}
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-[1.2fr_1fr] gap-6">
+              <Card title={t.balanceChart}>
+                <div
+                  ref={balanceChartRef}
+                  className="rounded-[16px] bg-[#11131A] border border-white/[0.04] p-4"
+                  onMouseLeave={() => setHoveredBalanceIndex(null)}
+                  onMouseMove={(e) => {
+                    if (!balanceSvgRef.current || chartPlotData.length === 0) return;
+                    const rect = balanceSvgRef.current.getBoundingClientRect();
+                    const xSvg = ((e.clientX - rect.left) / rect.width) * chartSvgW;
+                    const xClamped = Math.max(chartPadX, Math.min(chartPadX + chartPlotW, xSvg));
+                    let nearest = 0;
+                    let bestDist = Number.POSITIVE_INFINITY;
+                    chartPlotData.forEach((p, i) => {
+                      const dist = Math.abs(p.sx - xClamped);
+                      if (dist < bestDist) {
+                        bestDist = dist;
+                        nearest = i;
+                      }
+                    });
+                    setHoveredBalanceIndex(nearest);
+                  }}
+                >
+                  <div className="relative cursor-crosshair">
+                    <svg ref={balanceSvgRef} viewBox={`0 0 ${chartSvgW} ${chartSvgH}`} className="w-full h-64">
+                      <defs>
+                        <linearGradient id="balanceLine" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="#3260F3" />
+                          <stop offset="50%" stopColor="#25BDDF" />
+                 </div>
+              </Card>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
