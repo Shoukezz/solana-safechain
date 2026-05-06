@@ -248,4 +248,61 @@ pub struct ReviewAccount {
     pub rating: u8,
     pub comment: String,
     pub timestamp: i64,
+    pub applied: bool,
+    pub bump: u8,
+}
+
+impl ReviewAccount {
+    pub const LEN: usize =
+        32 + // reviewer
+        32 + // target
+        1 + // rating
+        4 + MAX_COMMENT_LEN + // comment
+        8 + // timestamp
+        1 + // applied
+        1; // bump
+}
+
+#[event]
+pub struct UserCreated {
+    pub wallet: Pubkey,
+    pub score: u8,
+    pub ts: i64,
+}
+
+#[event]
+pub struct ReviewAdded {
+    pub reviewer: Pubkey,
+    pub target: Pubkey,
+    pub rating: u8,
+    pub ts: i64,
+}
+
+#[event]
+pub struct ScoreUpdated {
+    pub wallet: Pubkey,
+    pub score: u8,
+    pub review_count: u32,
+    pub flagged: bool,
+    pub ts: i64,
+}
+
+#[error_code]
+pub enum SafeChainError {
+    #[msg("Rating must be between 1 and 5")]
+    InvalidRating,
+    #[msg("Comment exceeds max allowed length")]
+    CommentTooLong,
+    #[msg("Math overflow")]
+    MathOverflow,
+    #[msg("Reviewer profile does not match signer")]
+    InvalidReviewerProfile,
+    #[msg("You cannot review your own wallet")]
+    SelfReviewForbidden,
+    #[msg("Cooldown period has not passed")]
+    CooldownNotPassed,
+    #[msg("Review already applied")]
+    ReviewAlreadyApplied,
+    #[msg("Review target mismatch")]
+    ReviewTargetMismatch,
 }

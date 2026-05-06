@@ -181,7 +181,7 @@ function Card({ title, children, className = "" }: { title: string; children: Re
 }
 
 export default function App() {
-  const [lang, setLang] = useState<"en" | "uk">("uk");
+  const [lang, setLang] = useState<"en" | "uk">("en");
   const t = DICT[lang];
 
   const getRiskMeta = (score: number | null) => {
@@ -203,7 +203,7 @@ export default function App() {
   const [comment, setComment] = useState("");
   const [targetUser, setTargetUser] = useState<UserView | null>(null);
   const [reviews, setReviews] = useState<ReviewView[]>([]);
-  const [status, setStatus] = useState<string | null>(null);
+  const [statusGetter, setStatusGetter] = useState<((t: any) => string) | null>(null);
   const [statusType, setStatusType] = useState<"info" | "success" | "error">("info");
   const [chainStats, setChainStats] = useState<any>(null);
   const [isChecking, setIsChecking] = useState(false);
@@ -216,29 +216,29 @@ export default function App() {
   const balanceChartRef = useRef<HTMLDivElement | null>(null);
   const balanceSvgRef = useRef<SVGSVGElement | null>(null);
 
-  const displayStatus = status || t.statusInit;
+  const displayStatus = statusGetter ? statusGetter(t) : t.statusInit;
 
-  const setInfo = (msg: string) => { setStatusType("info"); setStatus(msg); };
-  const setSuccess = (msg: string) => { setStatusType("success"); setStatus(msg); };
-  const setError = (msg: string) => { setStatusType("error"); setStatus(msg); };
+  const setInfo = (fn: (t: any) => string) => { setStatusType("info"); setStatusGetter(() => fn); };
+  const setSuccess = (fn: (t: any) => string) => { setStatusType("success"); setStatusGetter(() => fn); };
+  const setError = (fn: (t: any) => string) => { setStatusType("error"); setStatusGetter(() => fn); };
 
   const parseError = (error: unknown) => {
     const text = `${error ?? ""}`;
-    if (text.includes("rejected")) return t.msgTxRejected;
-    if (text.includes("WalletSignTransactionError") || text.includes("Unexpected error")) return t.msgWalletSignRefused;
+    if (text.includes("rejected")) return (t: any) => t.msgTxRejected;
+    if (text.includes("WalletSignTransactionError") || text.includes("Unexpected error")) return (t: any) => t.msgWalletSignRefused;
     if (
       text.includes("Attempt to debit an account") ||
       text.includes("no record of a prior credit") ||
       text.includes("insufficient funds")
-    ) return t.msgNoSol;
-    if (text.includes("CooldownNotPassed")) return t.msgCooldown;
-    if (text.includes("already exists")) return t.msgAlreadyReviewed;
-    return t.msgSubmitFailed;
+    ) return (t: any) => t.msgNoSol;
+    if (text.includes("CooldownNotPassed")) return (t: any) => t.msgCooldown;
+    if (text.includes("already exists")) return (t: any) => t.msgAlreadyReviewed;
+    return (t: any) => t.msgSubmitFailed;
   };
 
   const loadTarget = async () => {
-    if (!provider) { setError(t.msgConnectWallet); return; }
-    setIsChecking(true); setInfo(t.btnChecking);
+    if (!provider) { setError(t => t.msgConnectWallet); return; }
+    setIsChecking(true); setInfo(t => t.btnChecking);
     try {
       const targetPubkey = new PublicKey(target);
       const program = getProgram(provider) as any;
@@ -370,18 +370,18 @@ export default function App() {
 
       setReviews(reviewAccounts.map((r: any) => ({ reviewer: r.account.reviewer.toBase58(), rating: r.account.rating, comment: r.account.comment, timestamp: Number(r.account.timestamp) })).sort((a: ReviewView, b: ReviewView) => b.timestamp - a.timestamp));
 
-      setSuccess(user ? t.msgLoadedProfile : t.msgLoadedBaseline);
+      setSuccess(t => user ? t.msgLoadedProfile : t.msgLoadedBaseline);
     } catch (e) {
       console.error(e);
-      setError(t.msgInvalidAddress); setTargetUser(null); setReviews([]); setChainStats(null); setTxHistory([]); setBalanceSeries([]);
+      setError(t => t.msgInvalidAddress); setTargetUser(null); setReviews([]); setChainStats(null); setTxHistory([]); setBalanceSeries([]);
     } finally { setIsChecking(false); }
   };
 
   const submitReview = async () => {
-    if (!provider || !wallet.publicKey) { setError(t.errConnect); return; }
-    if (!target.trim()) { setError(t.errTarget); return; }
-    if (!comment.trim()) { setError(t.errComment); return; }
-    setIsSubmitting(true); setInfo(`${t.btnSubmitting} ${t.msgConfirmWallet}`);
+    if (!provider || !wallet.publicKey) { setError(t => t.errConnect); return; }
+    if (!target.trim()) { setError(t => t.errTarget); return; }
+    if (!comment.trim()) { setError(t => t.errComment); return; }
+    setIsSubmitting(true); setInfo(t => `${t.btnSubmitting} ${t.msgConfirmWallet}`);
 
     try {
       const targetPubkey = new PublicKey(target);
@@ -450,7 +450,7 @@ export default function App() {
       }, "confirmed");
 
       setComment(""); setReviewTone("safe"); 
-      setSuccess(`✅ ${t.msgReviewCreated} ${sig.slice(0, 8)}...${sig.slice(-8)}`);
+      setSuccess(t => `✅ ${t.msgReviewCreated} ${sig.slice(0, 8)}...${sig.slice(-8)}`);
       await loadTarget();
     } catch (error) {
       console.error(error);
@@ -538,11 +538,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-              <div className="w-8 h-8 rounded-[10px] bg-gradient-to-br from-[#3260F3] to-[#25BDDF] flex items-center justify-center shadow-lg shadow-[#3260F3]/30">
-                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-              </div>
+              <img src="/logo.png" alt="SafeChain Logo" className="w-10 h-10 rounded-[10px]" />
               {t.brand}
             </h1>
             <span className="hidden md:inline-flex items-center rounded-lg bg-white/[0.05] border border-white/[0.05] px-3 py-1 text-xs font-semibold text-[#727B88]">{t.tagline}</span>
@@ -612,7 +608,7 @@ export default function App() {
                   onChange={(e) => {
                     setTarget(e.target.value);
                     setShowProfile(false);
-                    setStatus(null); // Reset status when typing
+                    setStatusGetter(null); // Reset status when typing
                     setStatusType("info");
                   }}
                 />
@@ -828,7 +824,177 @@ export default function App() {
                         <linearGradient id="balanceLine" x1="0" y1="0" x2="1" y2="0">
                           <stop offset="0%" stopColor="#3260F3" />
                           <stop offset="50%" stopColor="#25BDDF" />
-                 </div>
+                          <stop offset="100%" stopColor="#10B981" />
+                        </linearGradient>
+                        <linearGradient id="balanceArea" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#25BDDF" stopOpacity="0.28" />
+                          <stop offset="100%" stopColor="#25BDDF" stopOpacity="0" />
+                        </linearGradient>
+                      </defs>
+
+                      <rect x={chartPadX} y={chartPadY} width={chartPlotW} height={chartPlotH} fill="#0d1220" opacity="0.45" rx="10" />
+                      {yTicks.map((tick, idx) => (
+                        <g key={idx}>
+                          <line x1={chartPadX} y1={tick.y} x2={chartPadX + chartPlotW} y2={tick.y} stroke="rgba(255,255,255,0.10)" strokeWidth="1" />
+                          <text x={chartPadX - 12} y={tick.y + 4} textAnchor="end" fill="#6b7280" fontSize="12" fontWeight="600">
+                            {tick.value.toFixed(2)}
+                          </text>
+                        </g>
+                      ))}
+
+                      {chartAreaPath && <path d={chartAreaPath} fill="url(#balanceArea)" />}
+                      {chartLinePath && <path d={chartLinePath} fill="none" stroke="url(#balanceLine)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />}
+
+                      {chartPlotData.map((p, i) => (
+                        <circle key={i} cx={p.sx} cy={p.sy} r="2.6" fill="#9EC5FF" opacity="0.9" />
+                      ))}
+
+                      {hoveredPlotPoint && (
+                        <>
+                          <line x1={hoveredPlotPoint.sx} y1={chartPadY} x2={hoveredPlotPoint.sx} y2={chartPadY + chartPlotH} stroke="rgba(141,176,255,0.55)" strokeWidth="1" strokeDasharray="5 5" />
+                          <circle cx={hoveredPlotPoint.sx} cy={hoveredPlotPoint.sy} r="6" fill="rgba(141,176,255,0.2)" />
+                          <circle cx={hoveredPlotPoint.sx} cy={hoveredPlotPoint.sy} r="4" fill="#8DB0FF" />
+                        </>
+                      )}
+
+                      <text x={chartPadX} y={chartSvgH - 10} fill="#6b7280" fontSize="12" fontWeight="600">{balanceSeries[0]?.label ?? "Start"}</text>
+                      <text x={chartPadX + chartPlotW} y={chartSvgH - 10} textAnchor="end" fill="#6b7280" fontSize="12" fontWeight="600">{balanceSeries[balanceSeries.length - 1]?.label ?? "Now"}</text>
+                    </svg>
+                    {hoveredPlotPoint && (
+                      <div
+                        className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-[108%] rounded-xl border border-white/[0.12] bg-[#0F1320]/95 px-3 py-2 text-xs shadow-2xl backdrop-blur"
+                        style={{ left: `${(hoveredPlotPoint.sx / chartSvgW) * 100}%`, top: `${(hoveredPlotPoint.sy / chartSvgH) * 100}%` }}
+                      >
+                        <p className="text-white font-bold">{hoveredPlotPoint.value.toFixed(4)} SOL</p>
+                        <p className="text-[#A8B2C1]">{hoveredPlotPoint.label}</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-1 flex items-center justify-between text-xs text-[#727B88]">
+                    <span>Min: {minV.toFixed(3)} SOL</span>
+                    <span>Max: {maxV.toFixed(3)} SOL</span>
+                  </div>
+                </div>
+              </Card>
+
+              <Card title={t.trustGauge}>
+                <div className="rounded-[16px] bg-[#11131A] border border-white/[0.04] p-4 flex flex-col items-center">
+                  <svg viewBox="0 0 360 240" className="w-full max-w-[390px] h-auto">
+                    <defs>
+                      <filter id="needleGlow" x="-50%" y="-50%" width="200%" height="200%">
+                        <feGaussianBlur stdDeviation="2" result="blur" />
+                        <feMerge>
+                          <feMergeNode in="blur" />
+                          <feMergeNode in="SourceGraphic" />
+                        </feMerge>
+                      </filter>
+                      <linearGradient id="gaugeFlow" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#ef4444" />
+                        <stop offset="30%" stopColor="#f97316" />
+                        <stop offset="55%" stopColor="#f59e0b" />
+                        <stop offset="78%" stopColor="#84cc16" />
+                        <stop offset="100%" stopColor="#10b981" />
+                      </linearGradient>
+                    </defs>
+
+                    <path d="M64 180 A116 116 0 0 1 296 180" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="20" strokeLinecap="round" />
+                    <path d="M64 180 A116 116 0 0 1 296 180" fill="none" stroke="url(#gaugeFlow)" strokeWidth="14" strokeLinecap="round" />
+
+                    <line x1="64" y1="180" x2="74" y2="180" stroke="#94a3b8" strokeWidth="2" />
+                    <line x1="109" y1="96" x2="116" y2="102" stroke="#94a3b8" strokeWidth="2" />
+                    <line x1="180" y1="64" x2="180" y2="74" stroke="#94a3b8" strokeWidth="2" />
+                    <line x1="251" y1="96" x2="244" y2="102" stroke="#94a3b8" strokeWidth="2" />
+                    <line x1="296" y1="180" x2="286" y2="180" stroke="#94a3b8" strokeWidth="2" />
+
+                    <polygon
+                      points={`${needleTipX},${needleTipY} ${needleLeftX},${needleLeftY} ${needleRightX},${needleRightY}`}
+                      fill="#f8fafc"
+                      filter="url(#needleGlow)"
+                    />
+                    <circle cx={gaugeCx} cy={gaugeCy} r="10" fill="#f8fafc" />
+                    <circle cx={gaugeCx} cy={gaugeCy} r="4" fill="#0b0e14" />
+
+                    <text x="64" y="197" textAnchor="middle" fill="#727B88" fontSize="11" fontWeight="700">0</text>
+                    <text x="122" y="144" textAnchor="middle" fill="#727B88" fontSize="11" fontWeight="700">25</text>
+                    <text x="180" y="126" textAnchor="middle" fill="#727B88" fontSize="11" fontWeight="700">50</text>
+                    <text x="238" y="144" textAnchor="middle" fill="#727B88" fontSize="11" fontWeight="700">75</text>
+                    <text x="296" y="197" textAnchor="middle" fill="#727B88" fontSize="11" fontWeight="700">100</text>
+                  </svg>
+                  <p className={`mt-2 text-5xl font-extrabold ${riskMeta.scoreClass}`}>{riskMeta.scoreValue}</p>
+                  <span className={`mt-2 rounded-full border px-4 py-1 text-xs font-bold ${riskMeta.badgeClass}`}>{riskMeta.label}</span>
+                </div>
+              </Card>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="rounded-[16px] bg-[#11131A] p-4 border border-white/[0.04]"><p className="text-xs text-[#727B88]">{t.avgRating}</p><p className="mt-1 text-xl font-bold">{avgRating}</p></div>
+              <div className="rounded-[16px] bg-[#11131A] p-4 border border-white/[0.04]"><p className="text-xs text-[#727B88]">{t.scamShare}</p><p className="mt-1 text-xl font-bold">{scamShare}%</p></div>
+              <div className="rounded-[16px] bg-[#11131A] p-4 border border-white/[0.04]"><p className="text-xs text-[#727B88]">{t.recent7d}</p><p className="mt-1 text-xl font-bold">{reviews7d}</p></div>
+              <div className="rounded-[16px] bg-[#11131A] p-4 border border-white/[0.04]"><p className="text-xs text-[#727B88]">{t.recent30d}</p><p className="mt-1 text-xl font-bold">{reviews30d}</p></div>
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              <Card title={t.recentReviews}>
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {([
+                    ["all", t.filterAll],
+                    ["safe", t.filterSafe],
+                    ["neutral", t.filterNeutral],
+                    ["scam", t.filterScam],
+                  ] as const).map(([key, label]) => (
+                    <button
+                      key={key}
+                      onClick={() => setReviewFilter(key)}
+                      className={`h-9 px-4 rounded-[10px] text-xs font-bold border transition ${reviewFilter === key ? "bg-[#3260F3]/15 border-[#3260F3]/40 text-[#8DB0FF]" : "bg-[#11131A] border-white/[0.06] text-[#A8B2C1] hover:text-white"}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+                  {filteredReviews.length === 0 ? (
+                    <div className="py-8 text-center border border-dashed border-white/[0.05] rounded-[16px] bg-[#11131A]/50">
+                      <p className="text-sm font-semibold text-[#727B88]">{t.noReviews}</p>
+                    </div>
+                  ) : (
+                    filteredReviews.map((r, i) => (
+                      <div key={`${r.reviewer}-${r.timestamp}-${i}`} className="rounded-[16px] bg-[#11131A] p-4 border border-white/[0.02]">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className={`inline-flex items-center justify-center px-3 py-1 rounded-[8px] text-xs font-bold ${
+                            r.rating >= 4 ? 'bg-[#10B981]/10 text-[#10B981]' : r.rating === 3 ? 'bg-[#F59E0B]/10 text-[#F59E0B]' : 'bg-[#EF4444]/10 text-[#EF4444]'
+                          }`}>{r.rating} / 5</span>
+                          <span className="text-xs font-medium text-[#727B88]">{new Date(r.timestamp * 1000).toLocaleDateString()}</span>
+                        </div>
+                        <p className="text-sm text-white">{r.comment}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </Card>
+
+              <Card title={t.txHistory}>
+                <div className="max-h-[470px] overflow-y-auto pr-1">
+                  <table className="w-full text-sm">
+                    <thead className="text-[#727B88] text-xs uppercase">
+                      <tr>
+                        <th className="text-left pb-2">Tx</th>
+                        <th className="text-left pb-2">{t.status}</th>
+                        <th className="text-right pb-2">{t.delta}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {txHistory.length === 0 ? (
+                        <tr><td className="py-6 text-[#727B88]" colSpan={3}>{t.noReviews}</td></tr>
+                      ) : txHistory.map((tx) => (
+                        <tr key={tx.signature} className="border-t border-white/[0.04]">
+                          <td className="py-3 font-mono text-xs">{shortAddress(tx.signature)}</td>
+                          <td className={`py-3 text-xs font-bold ${tx.status === "success" ? "text-[#10B981]" : "text-[#EF4444]"}`}>{tx.status}</td>
+                          <td className={`py-3 text-right font-mono text-xs ${tx.deltaSol >= 0 ? "text-[#10B981]" : "text-[#EF4444]"}`}>{tx.deltaSol >= 0 ? "+" : ""}{tx.deltaSol.toFixed(4)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </Card>
             </div>
           </div>
