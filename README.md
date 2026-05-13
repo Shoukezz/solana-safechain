@@ -39,7 +39,7 @@ Want to run SafeChain locally? You'll need Node.js and npm installed.
 
 ### 1. Clone the repository
 `ash
-git clone https://github.com/vladnewt1/safe-chain-test.git
+git clone https://github.com/Shoukezz/safe-chain-test.git
 cd safe-chain-test
 `
 
